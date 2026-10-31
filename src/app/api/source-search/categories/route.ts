@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { API_CONFIG, getAvailableApiSites, getConfig } from '@/lib/config';
 import { parseJsonLosslessIntegers } from '@/lib/json';
+import { withSourceProxy } from '@/lib/source-proxy';
 import { yellowWords } from '@/lib/yellow';
 
 export const runtime = 'nodejs';
@@ -49,7 +50,7 @@ export async function GET(request: NextRequest) {
 
     // 请求分类列表
     const classUrl = `${targetSite.api}?ac=list`;
-    const classResponse = await fetch(classUrl, {
+    const classResponse = await fetch(withSourceProxy(classUrl), {
       headers: API_CONFIG.search.headers,
       signal: AbortSignal.timeout(10000),
     });

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { API_CONFIG, getAvailableApiSites } from '@/lib/config';
 import { parseJsonLosslessIntegers } from '@/lib/json';
+import { withSourceProxy } from '@/lib/source-proxy';
 import { SearchResult } from '@/lib/types';
 
 export const runtime = 'nodejs';
@@ -66,7 +67,7 @@ export async function GET(request: NextRequest) {
 
     // 请求分类视频列表
     const videoUrl = `${targetSite.api}?ac=videolist&t=${categoryId}&pg=${page}`;
-    const videoResponse = await fetch(videoUrl, {
+    const videoResponse = await fetch(withSourceProxy(videoUrl), {
       headers: API_CONFIG.search.headers,
       signal: AbortSignal.timeout(10000),
     });
