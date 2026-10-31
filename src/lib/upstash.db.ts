@@ -82,6 +82,13 @@ function getUpstashRedisClient(): Redis {
       process.env.UPSTASH_TOKEN || process.env.UPSTASH_KV_REST_API_TOKEN;
 
     if (!upstashUrl || !upstashToken) {
+      // Vercel 集成注入的 sensitive 变量在构建阶段不可读，
+      // 这里放行 page data collection，运行时再使用真实连接。
+      if (process.env.NEXT_PHASE === 'phase-production-build') {
+        client = new Redis({ url: 'https://build.invalid', token: 'build' });
+        (global as any)[globalKey] = client;
+        return client;
+      }
       throw new Error(
         'UPSTASH_URL and UPSTASH_TOKEN env variables must be set'
       );
