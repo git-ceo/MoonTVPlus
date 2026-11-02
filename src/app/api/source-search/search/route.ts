@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
-import { API_CONFIG, getAvailableApiSites } from '@/lib/config';
+import { API_CONFIG, getAvailableApiSites, getConfig } from '@/lib/config';
+import { shouldFilterContent } from '@/lib/filter-policy';
 import { parseJsonLosslessIntegers } from '@/lib/json';
 import { withSourceProxy } from '@/lib/source-proxy';
 import { SearchResult } from '@/lib/types';
+import { isBlockedContent, isBlockedTitle } from '@/lib/yellow';
 
 export const runtime = 'nodejs';
 
@@ -16,6 +18,7 @@ interface CmsVideoItem {
   vod_year?: string;
   vod_play_from?: string;
   vod_play_url?: string;
+  type_name?: string;
 }
 
 interface CmsVideoResponse {
@@ -54,6 +57,11 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const config = await getConfig();
+    const shouldFilter = shouldFilterContent(
+      request.headers.get('host'),
+      config.SiteConfig.DisableYellowFilter
+    );
     const specialOnly = request.nextUrl.searchParams.get('special') === '1';
     const apiSites = await getAvailableApiSites(authInfo.username, specialOnly);
     const targetSite = apiSites.find((site) => site.key === sourceKey);
@@ -90,7 +98,14 @@ export async function GET(request: NextRequest) {
     }
 
     // 转换为 SearchResult 格式
-    const results: SearchResult[] = searchData.list.map((item) => {
+    const list = shouldFilter
+      ? searchData.list.filter(
+          (item) =>
+            !isBlockedContent(item.type_name) && !isBlockedTitle(item.vod_name)
+        )
+      : searchData.list;
+
+    const results: SearchResult[] = list.map((item) => {
       const episodes: string[] = [];
       const episodes_titles: string[] = [];
 
