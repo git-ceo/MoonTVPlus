@@ -1,11 +1,11 @@
 /**
  * 按访问域名决定是否强制过滤内容。
  *
- * moonplus.1212331.xyz 是家庭/儿童入口，无论后台
+ * vod.12123333.xyz 是家庭/儿童入口，无论后台
  * DisableYellowFilter 怎么设置都强制过滤；
- * 其他域名（如 moonplusx.1212331.xyz）沿用后台配置。
+ * 其他域名（如 moonplusx.12123333.xyz）沿用后台配置。
  */
-const ALWAYS_FILTER_HOSTS = new Set(['moonplus.1212331.xyz']);
+const ALWAYS_FILTER_HOSTS = new Set(['vod.12123333.xyz']);
 
 export function shouldFilterContent(
   host: string | null | undefined,
