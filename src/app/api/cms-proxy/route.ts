@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { getConfig } from '@/lib/config';
 import { db } from '@/lib/db';
+import { shouldFilterContent } from '@/lib/filter-policy';
 import { parseJsonLosslessIntegers } from '@/lib/json';
 import {
   getCachedMetaInfo,
@@ -24,7 +25,12 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const apiUrl = searchParams.get('api');
-    const yellowFilter = searchParams.get('yellowFilter') === 'true';
+    const host =
+      request.headers.get('host') || request.headers.get('x-forwarded-host');
+    const config = await getConfig();
+    const yellowFilter =
+      searchParams.get('yellowFilter') === 'true' ||
+      shouldFilterContent(host, config.SiteConfig.DisableYellowFilter);
 
     if (!apiUrl) {
       return NextResponse.json(

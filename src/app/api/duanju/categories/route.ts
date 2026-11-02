@@ -4,8 +4,9 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { API_CONFIG, getCacheTime, getConfig } from '@/lib/config';
 import { getDuanjuSources, isDuanjuTypeName } from '@/lib/duanju';
+import { shouldFilterContent } from '@/lib/filter-policy';
 import { parseJsonLosslessIntegers } from '@/lib/json';
-import { yellowWords } from '@/lib/yellow';
+import { isBlockedContent } from '@/lib/yellow';
 
 export const runtime = 'nodejs';
 
@@ -52,6 +53,10 @@ export async function GET(request: NextRequest) {
       await response.text()
     );
     const config = await getConfig();
+    const shouldFilter = shouldFilterContent(
+      request.headers.get('host'),
+      config.SiteConfig.DisableYellowFilter
+    );
 
     const allClasses = data.class || [];
     const duanjuIds = new Set(
@@ -67,8 +72,8 @@ export async function GET(request: NextRequest) {
         const pid = (item.type_pid ?? 0).toString();
         // 命中短剧关键词的分类本身，或其直接子分类（子分类名称可能不含关键词）
         if (!duanjuIds.has(id) && !duanjuIds.has(pid)) return false;
-        if (!config.SiteConfig.DisableYellowFilter) {
-          return !yellowWords.some((word: string) => typeName.includes(word));
+        if (shouldFilter) {
+          return !isBlockedContent(typeName);
         }
         return true;
       })

@@ -5,8 +5,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getAvailableApiSites, getConfig } from '@/lib/config';
 import { searchFromApi } from '@/lib/downstream';
+import { shouldFilterContent } from '@/lib/filter-policy';
 import { hasFeaturePermission } from '@/lib/permissions';
-import { yellowWords } from '@/lib/yellow';
+import { isBlockedContent, isBlockedTitle } from '@/lib/yellow';
 import { getProxyToken } from '@/lib/emby-token';
 import {
   executeSavedSourceScript,
@@ -41,6 +42,10 @@ export async function GET(request: NextRequest) {
   }
 
   const config = await getConfig();
+  const shouldFilter = shouldFilterContent(
+    request.headers.get('host'),
+    config.SiteConfig.DisableYellowFilter
+  );
   const apiSites = privateOnly
     ? []
     : await getAvailableApiSites(authInfo.username, specialOnly);
@@ -383,11 +388,12 @@ export async function GET(request: NextRequest) {
 
           // 过滤黄色内容
           let filteredResults = safeResults;
-          if (!config.SiteConfig.DisableYellowFilter) {
-            filteredResults = safeResults.filter((result) => {
-              const typeName = result.type_name || '';
-              return !yellowWords.some((word: string) => typeName.includes(word));
-            });
+          if (shouldFilter) {
+            filteredResults = safeResults.filter(
+              (result) =>
+                !isBlockedContent(result.type_name) &&
+                !isBlockedTitle(result.title)
+            );
           }
 
           filteredResults = filteredResults.map((result) => ({
@@ -505,11 +511,12 @@ export async function GET(request: NextRequest) {
           );
 
           let filteredResults = sourceResults.flat();
-          if (!config.SiteConfig.DisableYellowFilter) {
-            filteredResults = filteredResults.filter((result) => {
-              const typeName = result.type_name || '';
-              return !yellowWords.some((word: string) => typeName.includes(word));
-            });
+          if (shouldFilter) {
+            filteredResults = filteredResults.filter(
+              (result) =>
+                !isBlockedContent(result.type_name) &&
+                !isBlockedTitle(result.title)
+            );
           }
 
           completedSources++;

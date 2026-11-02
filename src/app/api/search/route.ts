@@ -6,6 +6,7 @@ import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getAvailableApiSites, getCacheTime, getConfig } from '@/lib/config';
 import { searchFromApi } from '@/lib/downstream';
 import { getProxyToken } from '@/lib/emby-token';
+import { shouldFilterContent } from '@/lib/filter-policy';
 import { hasFeaturePermission } from '@/lib/permissions';
 import {
   executeSavedSourceScript,
@@ -13,7 +14,7 @@ import {
   normalizeScriptSearchResults,
   normalizeScriptSources,
 } from '@/lib/source-script';
-import { yellowWords } from '@/lib/yellow';
+import { isBlockedContent, isBlockedTitle } from '@/lib/yellow';
 
 export const runtime = 'nodejs';
 
@@ -44,6 +45,10 @@ export async function GET(request: NextRequest) {
   }
 
   const config = await getConfig();
+  const shouldFilter = shouldFilterContent(
+    request.headers.get('host'),
+    config.SiteConfig.DisableYellowFilter
+  );
   const apiSites = privateOnly
     ? []
     : await getAvailableApiSites(authInfo.username, specialOnly);
@@ -274,11 +279,11 @@ export async function GET(request: NextRequest) {
       weight: result.weight ?? (weightMap.get(result.source) ?? 0),
     }));
 
-    if (!config.SiteConfig.DisableYellowFilter) {
-      flattenedResults = flattenedResults.filter((result) => {
-        const typeName = result.type_name || '';
-        return !yellowWords.some((word: string) => typeName.includes(word));
-      });
+    if (shouldFilter) {
+      flattenedResults = flattenedResults.filter(
+        (result) =>
+          !isBlockedContent(result.type_name) && !isBlockedTitle(result.title)
+      );
     }
 
     // 按权重降序排序

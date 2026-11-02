@@ -6,7 +6,8 @@ import { AdminConfig } from '@/lib/admin.types';
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getAvailableApiSites, getConfig } from '@/lib/config';
 import { searchFromApi } from '@/lib/downstream';
-import { yellowWords } from '@/lib/yellow';
+import { shouldFilterContent } from '@/lib/filter-policy';
+import { isBlockedContent } from '@/lib/yellow';
 
 export const runtime = 'nodejs';
 
@@ -19,6 +20,10 @@ export async function GET(request: NextRequest) {
     }
 
     const config = await getConfig();
+    const shouldFilter = shouldFilterContent(
+      request.headers.get('host'),
+      config.SiteConfig.DisableYellowFilter
+    );
     const { searchParams } = new URL(request.url);
     const query = searchParams.get('q')?.trim();
 
@@ -69,7 +74,7 @@ async function generateSuggestions(config: AdminConfig, query: string, username:
     realKeywords = Array.from(
       new Set(
         results
-          .filter((r: any) => config.SiteConfig.DisableYellowFilter || !yellowWords.some((word: string) => (r.type_name || '').includes(word)))
+          .filter((r: any) => !shouldFilter || !isBlockedContent(r.type_name))
           .map((r: any) => r.title)
           .filter(Boolean)
           .flatMap((title: string) => title.split(/[ -:：·、-]/))

@@ -3,13 +3,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getAvailableApiSites, getCacheTime, getConfig } from '@/lib/config';
 import { searchFromApi } from '@/lib/downstream';
+import { shouldFilterContent } from '@/lib/filter-policy';
 import {
   executeSavedSourceScript,
   listEnabledSourceScripts,
   normalizeScriptSearchResults,
   normalizeScriptSources,
 } from '@/lib/source-script';
-import { yellowWords } from '@/lib/yellow';
+import { isBlockedContent, isBlockedTitle } from '@/lib/yellow';
 
 export const runtime = 'nodejs';
 
@@ -40,6 +41,10 @@ export async function GET(request: NextRequest) {
   }
 
   const config = await getConfig();
+  const shouldFilter = shouldFilterContent(
+    request.headers.get('host'),
+    config.SiteConfig.DisableYellowFilter
+  );
   const apiSites = await getAvailableApiSites(authInfo.username);
 
   try {
@@ -75,11 +80,11 @@ export async function GET(request: NextRequest) {
       );
 
       let result = scriptResults.flat().filter((r) => r.title === query);
-      if (!config.SiteConfig.DisableYellowFilter) {
-        result = result.filter((item) => {
-          const typeName = item.type_name || '';
-          return !yellowWords.some((word: string) => typeName.includes(word));
-        });
+      if (shouldFilter) {
+        result = result.filter(
+          (item) =>
+            !isBlockedContent(item.type_name) && !isBlockedTitle(item.title)
+        );
       }
 
       const cacheTime = await getCacheTime();
@@ -120,11 +125,11 @@ export async function GET(request: NextRequest) {
 
     const results = await searchFromApi(targetSite, query);
     let result = results.filter((r) => r.title === query);
-    if (!config.SiteConfig.DisableYellowFilter) {
-      result = result.filter((result) => {
-        const typeName = result.type_name || '';
-        return !yellowWords.some((word: string) => typeName.includes(word));
-      });
+    if (shouldFilter) {
+      result = result.filter(
+        (item) =>
+          !isBlockedContent(item.type_name) && !isBlockedTitle(item.title)
+      );
     }
     const cacheTime = await getCacheTime();
 

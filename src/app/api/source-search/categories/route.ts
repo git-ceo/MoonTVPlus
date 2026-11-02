@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { API_CONFIG, getAvailableApiSites, getConfig } from '@/lib/config';
+import { shouldFilterContent } from '@/lib/filter-policy';
 import { parseJsonLosslessIntegers } from '@/lib/json';
 import { withSourceProxy } from '@/lib/source-proxy';
-import { yellowWords } from '@/lib/yellow';
+import { isBlockedContent } from '@/lib/yellow';
 
 export const runtime = 'nodejs';
 
@@ -38,6 +39,10 @@ export async function GET(request: NextRequest) {
 
   try {
     const config = await getConfig();
+    const shouldFilter = shouldFilterContent(
+      request.headers.get('host'),
+      config.SiteConfig.DisableYellowFilter
+    );
     const apiSites = await getAvailableApiSites(authInfo.username, specialOnly);
     const targetSite = apiSites.find((site) => site.key === sourceKey);
 
@@ -71,11 +76,10 @@ export async function GET(request: NextRequest) {
 
     // 应用黄色过滤器规则
     let filteredCategories = classData.class;
-    if (!config.SiteConfig.DisableYellowFilter) {
-      filteredCategories = classData.class.filter((item) => {
-        const typeName = item.type_name || '';
-        return !yellowWords.some((word: string) => typeName.includes(word));
-      });
+    if (shouldFilter) {
+      filteredCategories = classData.class.filter(
+        (item) => !isBlockedContent(item.type_name)
+      );
     }
 
     return NextResponse.json({
