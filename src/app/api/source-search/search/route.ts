@@ -101,7 +101,8 @@ export async function GET(request: NextRequest) {
     const list = shouldFilter
       ? searchData.list.filter(
           (item) =>
-            !isBlockedContent(item.type_name) && !isBlockedTitle(item.vod_name)
+            !isBlockedContent(item.type_name, item.vod_name) &&
+            !isBlockedTitle(item.vod_name)
         )
       : searchData.list;
 

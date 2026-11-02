@@ -391,7 +391,7 @@ export async function GET(request: NextRequest) {
           if (shouldFilter) {
             filteredResults = safeResults.filter(
               (result) =>
-                !isBlockedContent(result.type_name) &&
+                !isBlockedContent(result.type_name, result.title) &&
                 !isBlockedTitle(result.title)
             );
           }
@@ -514,7 +514,7 @@ export async function GET(request: NextRequest) {
           if (shouldFilter) {
             filteredResults = filteredResults.filter(
               (result) =>
-                !isBlockedContent(result.type_name) &&
+                !isBlockedContent(result.type_name, result.title) &&
                 !isBlockedTitle(result.title)
             );
           }

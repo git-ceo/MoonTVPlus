@@ -79,7 +79,7 @@ async function generateSuggestions(config: AdminConfig, query: string, username:
     realKeywords = Array.from(
       new Set(
         results
-          .filter((r: any) => !shouldFilter || !isBlockedContent(r.type_name))
+          .filter((r: any) => !shouldFilter || !isBlockedContent(r.type_name, r.title))
           .map((r: any) => r.title)
           .filter(Boolean)
           .flatMap((title: string) => title.split(/[ -:：·、-]/))

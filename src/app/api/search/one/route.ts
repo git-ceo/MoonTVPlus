@@ -83,7 +83,8 @@ export async function GET(request: NextRequest) {
       if (shouldFilter) {
         result = result.filter(
           (item) =>
-            !isBlockedContent(item.type_name) && !isBlockedTitle(item.title)
+            !isBlockedContent(item.type_name, item.title) &&
+            !isBlockedTitle(item.title)
         );
       }
 

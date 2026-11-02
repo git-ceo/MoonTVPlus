@@ -282,7 +282,8 @@ export async function GET(request: NextRequest) {
     if (shouldFilter) {
       flattenedResults = flattenedResults.filter(
         (result) =>
-          !isBlockedContent(result.type_name) && !isBlockedTitle(result.title)
+          !isBlockedContent(result.type_name, result.title) &&
+          !isBlockedTitle(result.title)
       );
     }
 
